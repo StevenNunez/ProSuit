@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ProSuit · tienda online
 
-## Getting Started
+Tienda de uniformes y prendas personalizadas de ProSuit (La Serena, Chile).
+Reemplaza el sitio WordPress/WooCommerce anterior con una tienda propia y un
+panel de administración.
 
-First, run the development server:
+**Stack:** Next.js 16 (App Router) · Tailwind CSS 4 · Supabase (Postgres, Auth,
+Storage) · Mercado Pago Checkout Pro · Vercel.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Puesta en marcha
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Supabase**: crea un proyecto y ejecuta `supabase/migraciones/0001_tienda.sql`
+   en el SQL Editor (crea tablas, políticas RLS, el bucket `productos` y los
+   ajustes iniciales).
+2. **Variables de entorno**: copia `.env.example` a `.env.local` y completa las
+   claves de Supabase. `NEXT_PUBLIC_SITE_URL` debe ser la URL pública del sitio.
+3. **Dependencias y datos**:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   ```bash
+   npm install
+   npm run sembrar   # crea el admin, el cliente demo y el catálogo de ejemplo
+   npm run dev
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   `npm run sembrar` lee `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `DEMO_EMAIL` y
+   `DEMO_PASSWORD` de `.env.local`. Es idempotente: se puede volver a correr.
 
-## Learn More
+4. **Mercado Pago**: en [Tus integraciones](https://www.mercadopago.cl/developers/panel/app)
+   crea una aplicación (Checkout Pro), copia el *Access Token* de producción a
+   `MP_ACCESS_TOKEN` y registra el webhook `https://<dominio>/api/mercadopago/webhook`
+   (evento *Pagos*); la clave secreta del webhook va en `MP_WEBHOOK_SECRET`.
+   Sin token la tienda sigue vendiendo por transferencia bancaria.
 
-To learn more about Next.js, take a look at the following resources:
+## Estructura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Ruta | Qué es |
+| --- | --- |
+| `src/app/(tienda)` | Sitio público: portada, tienda, producto, carrito, checkout, pedidos, cuenta y páginas de contenido. |
+| `src/app/admin` | Panel: escritorio, pedidos, productos, categorías, cupones, clientes, mensajes, envíos, informes y ajustes. |
+| `src/app/api/mercadopago/webhook` | Notificaciones de pago de Mercado Pago. |
+| `src/lib/acciones` | Server Actions (checkout, auth, panel, contacto). |
+| `src/lib/datos` | Consultas de catálogo y ajustes. |
+| `src/lib/contenido.ts` | Textos editoriales migrados del sitio original (FAQ, equipo, recursos…). |
+| `supabase/migraciones` | Esquema SQL. |
+| `scripts/` | Siembra de datos demo. |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Roles
 
-## Deploy on Vercel
+- **Cliente**: compra con o sin cuenta; con cuenta ve su historial en `/mi-cuenta`.
+- **Admin** (`perfiles.rol = 'admin'`): acceso a `/admin`. Se asigna desde
+  *Clientes → Hacer admin* o con el script de siembra.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy en Vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Importar el repo, definir las variables de `.env.example` (sin las de siembra)
+y desplegar. Después del primer deploy, configurar el dominio `prosuit.cl` y
+actualizar `NEXT_PUBLIC_SITE_URL`, la URL del webhook en Mercado Pago y la
+*Site URL* / *Redirect URLs* en Supabase Auth (`https://prosuit.cl/auth/callback`).
