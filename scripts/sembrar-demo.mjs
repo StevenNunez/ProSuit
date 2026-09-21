@@ -42,10 +42,10 @@ if (!url || !serviceRole) {
 if (!adminEmail || !adminPassword || !demoPassword) {
   console.error(
     "Faltan credenciales en .env.local. Agrega:\n" +
-      "  ADMIN_EMAIL=correo-del-dueno@prosuit.cl\n" +
-      "  ADMIN_PASSWORD=una-clave-larga\n" +
-      "  DEMO_EMAIL=demo@prosuit.cl\n" +
-      "  DEMO_PASSWORD=otra-clave-larga\n",
+      "  ADMIN_EMAIL=<correo del dueño de la tienda>\n" +
+      "  ADMIN_PASSWORD=<clave larga>\n" +
+      "  DEMO_EMAIL=<correo del cliente demo>\n" +
+      "  DEMO_PASSWORD=<otra clave larga>\n",
   );
   process.exit(1);
 }
