@@ -1,4 +1,5 @@
-import { crearClienteServidor } from "@/lib/supabase/servidor";
+import { cache } from "react";
+import { crearClientePublico } from "@/lib/supabase/publico";
 import type { Categoria, ProductoConRelaciones, ZonaEnvio } from "@/lib/tipos";
 
 const SELECT_PRODUCTO = "*, categoria:categorias(id,nombre,slug), variantes(*)";
@@ -12,7 +13,7 @@ export interface FiltrosCatalogo {
 }
 
 export async function listarCategorias(): Promise<Categoria[]> {
-  const supabase = await crearClienteServidor();
+  const supabase = crearClientePublico();
   const { data } = await supabase
     .from("categorias")
     .select("*")
@@ -23,7 +24,7 @@ export async function listarCategorias(): Promise<Categoria[]> {
 }
 
 export async function listarProductos(filtros: FiltrosCatalogo = {}): Promise<ProductoConRelaciones[]> {
-  const supabase = await crearClienteServidor();
+  const supabase = crearClientePublico();
   let consulta = supabase.from("productos").select(SELECT_PRODUCTO).eq("activo", true);
 
   if (filtros.categoria) {
@@ -60,8 +61,9 @@ export async function listarProductos(filtros: FiltrosCatalogo = {}): Promise<Pr
   return ordenarVariantes((data ?? []) as ProductoConRelaciones[]);
 }
 
-export async function obtenerProductoPorSlug(slug: string): Promise<ProductoConRelaciones | null> {
-  const supabase = await crearClienteServidor();
+/** Memorizado por request: lo piden tanto `generateMetadata` como la página. */
+export const obtenerProductoPorSlug = cache(async (slug: string): Promise<ProductoConRelaciones | null> => {
+  const supabase = crearClientePublico();
   const { data } = await supabase
     .from("productos")
     .select(SELECT_PRODUCTO)
@@ -70,10 +72,10 @@ export async function obtenerProductoPorSlug(slug: string): Promise<ProductoConR
     .maybeSingle();
   if (!data) return null;
   return ordenarVariantes([data as ProductoConRelaciones])[0];
-}
+});
 
 export async function productosRelacionados(producto: ProductoConRelaciones, cantidad = 4) {
-  const supabase = await crearClienteServidor();
+  const supabase = crearClientePublico();
   let consulta = supabase
     .from("productos")
     .select(SELECT_PRODUCTO)
@@ -86,7 +88,7 @@ export async function productosRelacionados(producto: ProductoConRelaciones, can
 }
 
 export async function listarZonasEnvio(): Promise<ZonaEnvio[]> {
-  const supabase = await crearClienteServidor();
+  const supabase = crearClientePublico();
   const { data } = await supabase.from("zonas_envio").select("*").eq("activa", true).order("orden");
   return data ?? [];
 }

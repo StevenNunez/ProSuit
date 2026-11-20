@@ -6,6 +6,15 @@ import { NextResponse, type NextRequest } from "next/server";
  * privadas: /admin (solo administradores) y /mi-cuenta (usuarios logueados).
  */
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const esAdminRuta = pathname.startsWith("/admin");
+  const esCuentaRuta = pathname.startsWith("/mi-cuenta");
+  const esPrivada = esAdminRuta || esCuentaRuta;
+
+  // Visitante sin sesión en una página pública: nada que refrescar ni proteger.
+  const tieneSesion = request.cookies.getAll().some((c) => c.name.startsWith("sb-"));
+  if (!esPrivada && !tieneSesion) return NextResponse.next();
+
   let respuesta = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -27,16 +36,20 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // getUser() valida el token contra Supabase; no usar getSession() acá.
+  // Páginas públicas: solo refrescar la sesión si venció. getSession() lee la
+  // cookie sin ir a la red (salvo que toque renovar el token); antes se llamaba
+  // a getUser() en cada página y en cada prefetch, y eso iba a Supabase siempre.
+  if (!esPrivada) {
+    await supabase.auth.getSession();
+    return respuesta;
+  }
+
+  // Zonas privadas: getUser() valida el token contra Supabase; no usar getSession() acá.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-  const esAdminRuta = pathname.startsWith("/admin");
-  const esCuentaRuta = pathname.startsWith("/mi-cuenta");
-
-  if ((esAdminRuta || esCuentaRuta) && !user) {
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("volver", pathname);

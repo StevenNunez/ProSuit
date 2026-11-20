@@ -3,19 +3,50 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, ShoppingBag, User, X } from "lucide-react";
 import { navegacion, navegacionSecundaria, sitio } from "@/lib/sitio";
 import { cantidadCarrito, useCarrito, useCarritoHidratado } from "@/lib/carrito";
 import { IconoFacebook, IconoInstagram, IconoX } from "@/components/ui/IconosRedes";
+import { crearClienteNavegador } from "@/lib/supabase/navegador";
 
-interface Props {
-  sesionIniciada: boolean;
-  esAdmin: boolean;
+/**
+ * Sesión leída en el navegador: `getSession()` lee la cookie local (sin ir a la
+ * red), y solo si hay sesión se consulta el rol. Así el servidor no tiene que
+ * esperar a Supabase para entregar cada página pública.
+ */
+function useSesionEncabezado() {
+  const [estado, setEstado] = useState({ sesionIniciada: false, esAdmin: false });
+
+  useEffect(() => {
+    const supabase = crearClienteNavegador();
+    let vigente = true;
+
+    async function resolver(idUsuario: string | undefined) {
+      if (!idUsuario) {
+        if (vigente) setEstado({ sesionIniciada: false, esAdmin: false });
+        return;
+      }
+      const { data } = await supabase.from("perfiles").select("rol").eq("id", idUsuario).maybeSingle();
+      if (vigente) setEstado({ sesionIniciada: true, esAdmin: data?.rol === "admin" });
+    }
+
+    supabase.auth.getSession().then(({ data }) => resolver(data.session?.user.id));
+    const { data: sub } = supabase.auth.onAuthStateChange((evento, sesion) => {
+      if (evento === "SIGNED_IN" || evento === "SIGNED_OUT") resolver(sesion?.user.id);
+    });
+    return () => {
+      vigente = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  return estado;
 }
 
 /** Cabecera fiel al sitio original: logo, barra negra centrada con "+" y redes a la derecha. */
-export default function Encabezado({ sesionIniciada, esAdmin }: Props) {
+export default function Encabezado() {
+  const { sesionIniciada, esAdmin } = useSesionEncabezado();
   const ruta = usePathname();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [masAbierto, setMasAbierto] = useState(false);

@@ -1,15 +1,20 @@
 import Encabezado from "@/components/tienda/Encabezado";
 import PieDePagina from "@/components/tienda/PieDePagina";
 import CarritoLateral from "@/components/tienda/CarritoLateral";
-import { obtenerSesion } from "@/lib/supabase/sesion";
 import { obtenerAjustes } from "@/lib/datos/ajustes";
 
+// Las páginas públicas se pre-generan y se sirven desde caché; se vuelven a
+// armar como mucho cada 5 minutos (y al tiro cuando el panel guarda cambios,
+// por `revalidatePath`). La sesión ya no se lee acá: el encabezado la resuelve
+// en el navegador, así la portada no espera a Supabase en cada visita.
+export const revalidate = 300;
+
 export default async function LayoutTienda({ children }: LayoutProps<"/">) {
-  const [{ usuario, perfil }, ajustes] = await Promise.all([obtenerSesion(), obtenerAjustes()]);
+  const ajustes = await obtenerAjustes();
 
   return (
     <>
-      <Encabezado sesionIniciada={!!usuario} esAdmin={perfil?.rol === "admin"} />
+      <Encabezado />
       <main className="flex-1">{children}</main>
       <PieDePagina tienda={ajustes.tienda} />
       <CarritoLateral />

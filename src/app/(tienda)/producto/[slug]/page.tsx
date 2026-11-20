@@ -9,6 +9,12 @@ import { obtenerProductoPorSlug, productosRelacionados } from "@/lib/datos/catal
 import { formatearCLP, precioVigente } from "@/lib/formato";
 import { enlaceWhatsApp } from "@/lib/sitio";
 
+// Cada ficha se arma la primera vez que alguien la visita y después se sirve
+// desde caché (se refresca con el `revalidate` del layout o al guardar en el panel).
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: PageProps<"/producto/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const producto = await obtenerProductoPorSlug(slug);

@@ -1,4 +1,4 @@
-import { crearClienteServidor } from "@/lib/supabase/servidor";
+import { crearClientePublico } from "@/lib/supabase/publico";
 import { sitio } from "@/lib/sitio";
 import type { AjustesRetiro, AjustesTienda, AjustesTransferencia } from "@/lib/tipos";
 
@@ -31,7 +31,7 @@ const PREDETERMINADOS = {
 export type ClaveAjuste = keyof typeof PREDETERMINADOS;
 
 export async function obtenerAjustes() {
-  const supabase = await crearClienteServidor();
+  const supabase = crearClientePublico();
   const { data } = await supabase.from("ajustes").select("clave, valor");
   const mapa = new Map((data ?? []).map((f) => [f.clave, f.valor]));
   return {
